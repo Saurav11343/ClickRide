@@ -157,6 +157,37 @@ export default function VehicleDashboard() {
                                 </select>
                             </div>
 
+                            {/* Gerne Filter */}
+                            <div className='flex item-center gap-2'>
+                                <Car className='' />
+                                <select
+                                    className='rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                                    value={filters.vehicleType}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, vehicleType: e.target.value }))}
+                                >
+                                    <option value="all">All Types</option>
+                                    {uniqueTypes.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+
+                                </select>
+
+                            </div>
+                            {/* Genre Filter */}
+                            <div className="flex items-center gap-2">
+                                <Car className="h-5 w-5 text-gray-600" />
+                                <select
+                                    className="rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                    value={filters.vehicleType}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, vehicleType: e.target.value }))}
+                                >
+                                    <option value="all">All Types</option>
+                                    {uniqueTypes.map(type => (
+                                        <option key={type} value={type}>{type}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             {/* Make Filter */}
                             <div className="flex items-center gap-2">
                                 <Car className="h-5 w-5 text-gray-600" />
@@ -188,6 +219,11 @@ export default function VehicleDashboard() {
                             </div>
                         </div>
                     </div>
+
+<div>
+    <select name="" id="">
+    </select>
+</div>
 
                     {/* Main Content */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -228,6 +264,10 @@ export default function VehicleDashboard() {
                                                                 e.target.src = '/vehicle-placeholder.jpg';
                                                             }}
                                                         />
+                                                        <div
+                                                            className='absolute top-2 right-2 bg-white px-6 text-blue-600 shadow'>
+
+                                                        </div>
                                                         <div className="absolute top-2 right-2 bg-white px-3 py-1 rounded-full text-sm font-medium text-blue-600 shadow-sm">
                                                             {vehicle.modelID?.vehicleType}
                                                         </div>
@@ -246,13 +286,25 @@ export default function VehicleDashboard() {
                                                                 <Users className="w-4 h-4" />
                                                                 {vehicle.vehicleSeat} Seats
                                                             </div>
+                                                            <div className='flex items-center gap-2'>
+                                                                <Users className='w-4 h-4' />
+                                                                {vehicle.vehicleSeat}Dummy Seats
+                                                            </div>
                                                             <div className="flex items-center gap-2">
                                                                 <Gauge className="w-4 h-4" />
                                                                 {vehicle.vehicleTransmission}
                                                             </div>
+                                                            <div className='flex items-center gap-2'>
+                                                                <Users className='w-4 h-4' />
+                                                                {vehicle.vehicleTransmission}Dummy Transmission
+                                                            </div>
                                                             <div className="flex items-center gap-2">
                                                                 <Fuel className="w-4 h-4" />
                                                                 {vehicle.vehicleFuelType}
+                                                            </div>
+                                                            <div className='flex items-center gap-2'>
+                                                                <Users className='w-4 h-4' />
+                                                                {vehicle.vehicleFuelType}Dummy Fuel Type
                                                             </div>
                                                             <div className="flex items-center gap-2">
                                                                 <Car className="w-4 h-4" />

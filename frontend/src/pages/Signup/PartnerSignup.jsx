@@ -202,13 +202,18 @@ export default function PartnerSignup() {
                             <p className="text-white text-xs mt-2 text-center w-44 mx-auto">
                                 Your face video with something moving in the background.
                             </p>
+
                         </div>
+
                     </div>
 
                     {/* Second Column: User Details */}
                     <div className="space-y-6">
                         {/* First and Last Name */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className=" grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <label htmlFor="firstcolumn" className='bloack text-white text-base font-medium'></label>
+                            </div>
                             <div>
                                 <label htmlFor="firstName" className="block text-white text-base font-medium">First Name</label>
                                 <input
@@ -219,6 +224,7 @@ export default function PartnerSignup() {
                                     onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                                     placeholder="Enter your first name"
                                 />
+
                             </div>
                             <div>
                                 <label htmlFor="lastName" className="block text-white text-base font-medium">Last Name</label>
@@ -257,6 +263,8 @@ export default function PartnerSignup() {
                                 onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
                                 placeholder="Enter your mobile number"
                             />
+                            <input type="datetime-local" name="" id="" />
+
                         </div>
 
                         {/* Gender */}
@@ -274,7 +282,49 @@ export default function PartnerSignup() {
                                 <option value="Other">Other</option>
                             </select>
                         </div>
+                        {/* Gender */}
+                        <div>
+                            <label htmlFor="gender" className="block text-white text-base font-medium">Gender</label>
+                            <select
+                                id="gender"
+                                className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                value={formData.gender}
+                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            >
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
 
+                            </select>
+                        </div>
+
+                        <div>
+                            <label htmlFor="gender" className="block text-white text-base font-medium">Gender</label>
+                            <select
+                                id="gender"
+                                className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500"
+                                value={formData.gender}
+                                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                            >
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="meow">
+                                <select
+                                    id="meow1"
+                                    className='w-full mt-1 p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500'
+                                    value={formData.meow}
+                                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                    >
+                                </select>
+                            </label>
+                        </div>
                         {/* Date of Birth */}
                         <div>
                             <label htmlFor="dob" className="block text-white text-base font-medium">Date of Birth</label>
@@ -285,6 +335,7 @@ export default function PartnerSignup() {
                                 value={formData.dob}
                                 onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
                             />
+
                         </div>
 
 
@@ -298,10 +349,11 @@ export default function PartnerSignup() {
                     </p>
                 </div>
 
+
                 {/* Submit Button */}
                 <div className="text-center mt-6">
                     {isSigningUp ? (
-                        <div className="flex items-center justify-center">
+                        <div className="flex items-center+ justify-center">
                             <Loader className="size-10 animate-spin text-white" />
                         </div>
                     ) : (
@@ -309,9 +361,15 @@ export default function PartnerSignup() {
                             type="submit"
                             className="w-full py-2 px-4 bg-teal-500 text-white font-semibold rounded-lg focus:outline-none hover:bg-teal-600"
                         >
+
                             Sign Up
                         </button>
                     )}
+                </div>
+
+
+                <div>
+                    Meowthis i am here to help
                 </div>
                 {/* Login Link */}
                 <div className="text-center mt-6">

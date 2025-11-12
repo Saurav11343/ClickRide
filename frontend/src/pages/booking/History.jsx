@@ -49,6 +49,7 @@ const BookingCard = ({ booking, onCancel, navigate, getStatusColor }) => {
                         </span>
                     </div>
 
+
                     <div className="bg-gray-50 p-2 rounded-lg">
                         <div className="flex items-center mb-1">
                             <Calendar className="w-4 h-4 text-indigo-500 mr-2" />
@@ -58,6 +59,7 @@ const BookingCard = ({ booking, onCancel, navigate, getStatusColor }) => {
                             {new Date(booking.endDateTime).toLocaleDateString()}
                         </span>
                     </div>
+
                 </div>
 
                 {/* Price and Status */}
@@ -196,6 +198,7 @@ export default function History() {
             } else {
                 toast.error(response.message || "Failed to cancel booking.");
             }
+
         } catch (error) {
             toast.error(error.message || "An unexpected error occurred while canceling the booking.");
             console.error("Error canceling booking:", error);
@@ -250,6 +253,13 @@ export default function History() {
                                     <Car className="w-6 h-6 text-indigo-600 mr-2" />
                                     Booking History
                                 </h2>
+
+                                <div>
+                                    <div className="meowname">
+                                        <label htmlFor="meowname">Enter Meow name : </label>
+                                        <input type="text" name="meowname" id="meowname" />
+                                    </div>
+                                </div>
                                 <div className="flex flex-wrap items-center gap-4">
                                     <select
                                         value={selectedStatus}
@@ -268,6 +278,7 @@ export default function History() {
                                             className={`px-3 py-1 rounded-md ${viewMode === "list" ? "bg-indigo-600 text-white" : "text-gray-600 hover:bg-gray-200"}`}
                                         >
                                             <List className="w-4 h-4 mr-1" /> List
+
                                         </button>
                                         <button
                                             onClick={() => toggleViewMode("card")}
@@ -309,6 +320,7 @@ export default function History() {
                                                 <th className="px-4 py-3 text-left">Actions</th>
                                             </tr>
                                         </thead>
+
                                         <tbody>
                                             {/* {bookingDetails.map((booking, index) => ( */}
                                             {filteredBookings.map((booking, index) => (
@@ -336,6 +348,30 @@ export default function History() {
                                                             </span>
                                                         </div>
                                                     </td>
+
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center">
+                                                            <Calendar className="w-5 h-5 text-gray-500 mr-2" />
+                                                            <span className="text-gray-600">
+                                                                {new Date(booking.startDateTime).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <div>
+                                                            <Calendar className="w-5 h-5 text-gray-500 mr-2" />
+                                                            <span className="text-gray-600">
+                                                                {new Date(booking.startDateTime).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flexitem">
+
+                                                        </div>
+
+                                                    </td>
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center">
                                                             <Calendar className="w-5 h-5 text-gray-500 mr-2" />
@@ -349,6 +385,7 @@ export default function History() {
                                                             ₹{booking.totalPrice.toFixed(2)}
                                                         </span>
                                                     </td>
+
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center">
                                                             {booking?.status === "Cancelled" ? (
@@ -364,9 +401,13 @@ export default function History() {
                                                                 {booking?.status || "Unknown"}
                                                             </span>
                                                         </div>
+                                                        <div>
 
+                                                        </div>
 
                                                     </td>
+
+
                                                     <td className="px-4 py-3">
                                                         <div className="flex items-center space-x-2">
                                                             <BookingPDF booking={booking} />
@@ -413,7 +454,11 @@ export default function History() {
                                     ))}
 
                                 </div>
+                                
+
                             )}
+                            <div className="grid grid-cols-1 md:grid-cols-2 ">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -445,6 +490,12 @@ export default function History() {
                                     Yes, cancel booking
                                 </button>
                             )}
+                        </div>
+                        <div>
+                            <button>
+                                <Loader className="size-10 animate-spin" />
+                                
+                            </button>
                         </div>
                     </div>
                 </div>
