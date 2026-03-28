@@ -141,8 +141,6 @@ export default function Booking() {
       };
 
       const order = await createOrder(orderData);
-      console.log("Order created:", order);
-      console.log("Razorpay Key ID:", import.meta.env.VITE_RAZORPAY_KEY_ID);
 
       // Configure Razorpay Checkout options using the created order details
       const options = {
