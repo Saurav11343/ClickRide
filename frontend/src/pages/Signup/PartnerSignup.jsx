@@ -375,7 +375,6 @@ export default function PartnerSignup() {
           )}
         </div>
 
-        <div>Meowthis i am here to help</div>
         {/* Login Link */}
         <div className="text-center mt-6">
           <p className="text-white font-bold">
