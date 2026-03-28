@@ -29,6 +29,7 @@ app.use(
     credentials: true,
   }),
 );
+
 // Use the authentication routes
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicle", vehicleRoutes);
