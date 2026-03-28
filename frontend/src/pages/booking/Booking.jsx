@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { BookingSchema } from "../../../../backend/src/validators/booking.vaildator"
+import { BookingSchema } from "../../backend/src/validators/booking.vaildator"
 import CustomerNav from "../../component/Header/Header";
 import Footer from "../../component/Footer/Footer";
 import { useVehicleStore } from "../../store/useVehicleStore";
