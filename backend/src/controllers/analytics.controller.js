@@ -313,7 +313,6 @@ export const getVehicleStats = async (req, res) => {
 
 export const getAdminAnalytics = async (req, res) => {
     try {
-        console.log("📌 Admin Analytics API hit");
 
         // 1️⃣ Total Revenue
         const totalRevenueData = await Booking.aggregate([
@@ -563,7 +562,7 @@ export const getAdminAnalytics = async (req, res) => {
 
     } catch (error) {
         console.error("❌ Error in Admin Analytics API:", error);
-        res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Internal Server Error" });
     }
 };
 
@@ -755,7 +754,7 @@ export const getPartnerAnalytics = async (req, res) => {
         res.status(500).json({
             success: false,
             message: "Failed to fetch partner analytics",
-            error: error.message
+      error: "Internal Server Error"
         });
     }
 };

@@ -1,15 +1,15 @@
-import express from "express"
-import { protectRoute } from "../middleware/auth.middleware.js";
+import { Router } from "express";
+import {
+  getAdminAnalytics,
+  getBookingStats,
+  getPartnerAnalytics,
+} from "../controllers/analytics.controller.js";
+import { protectRoute, requireRole } from "../middleware/auth.middleware.js";
 
-import { getBookingStats, getRevenueStats, getVehicleStats, getAdminAnalytics, getPartnerAnalytics } from "../controllers/analytics.controller.js"
-const router = express.Router()
+const router = Router();
 
-router.get("/booking-stats", getBookingStats)
-// router.get("/revenue-stats", getRevenueStats)
-// router.get("/vehicle-stats", getVehicleStats)
-
-router.get("/getAdminAnalytics", getAdminAnalytics)
-router.get("/getPartnerAnalytics", protectRoute, getPartnerAnalytics)
-
+router.get("/booking-stats", protectRoute, requireRole("Admin"), getBookingStats);
+router.get("/getAdminAnalytics", protectRoute, requireRole("Admin"), getAdminAnalytics);
+router.get("/getPartnerAnalytics", protectRoute, requireRole("Partner"), getPartnerAnalytics);
 
 export default router;

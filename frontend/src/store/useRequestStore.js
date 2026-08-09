@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../lib/apiError.js";
 
 export const useRequestStore = create((set) => ({
     isVerified: false,
@@ -17,8 +18,7 @@ export const useRequestStore = create((set) => ({
             }
             return res;
         } catch (error) {
-            console.error("Error verifying vehicle:", error);
-            toast.error("Failed to verify vehicle.");
+            toast.error(getApiErrorMessage(error, "Failed to verify vehicle"));
         }
     },
 
@@ -33,19 +33,13 @@ export const useRequestStore = create((set) => ({
             }
             return res;
         } catch (error) {
-            console.error("Error cancelling vehicle request:", error);
-            toast.error("Failed to cancel vehicle request.");
+            toast.error(getApiErrorMessage(error, "Failed to cancel vehicle request"));
         }
     },
 
     fetchAllVehicleRequest: async () => {
-        try {
-            const res = await axiosInstance.get("/request/fetchAllVehicleRequest");
-            return res.data; // Return the fetched data
-        } catch (error) {
-            console.error("Error fetching vehicle requests:", error);
-            throw error; // Propagate the error for handling
-        }
+        const res = await axiosInstance.get("/request/fetchAllVehicleRequest");
+        return res.data;
     }
 
 }));

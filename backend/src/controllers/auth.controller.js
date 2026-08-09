@@ -1,267 +1,156 @@
 import bcrypt from "bcryptjs";
-import { generateToken } from "../lib/utils.js";
-import User from "../models/user.model.js";
-import Role from "../models/role.model.js";
 import cloudinary from "../lib/cloudinary.js";
-import { getFileNameFromUrl } from "../lib/utils.js";
+import { generateToken, getFileNameFromUrl } from "../lib/utils.js";
+import { AppError, asyncHandler } from "../middleware/error.middleware.js";
+import Role from "../models/role.model.js";
+import User from "../models/user.model.js";
 
-export const signup = async (req, res) => {
-    const { firstName, lastName, email, password, dob, mobile, roleName } = req.body;
+const publicUser = (user, roleName) => ({
+  _id: user._id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  dob: user.dob,
+  mobile: user.mobile,
+  profilePic: user.profilePic || null,
+  mustChangePassword: user.mustChangePassword,
+  roleId: user.roleId?._id || user.roleId,
+  roleName,
+});
 
-    try {
-
-        if (!firstName || !lastName || !email || !password || !dob || !mobile || !roleName) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-
-        if (password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters" });
-        }
-
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "Email already exists" });
-        }
-
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDifference = today.getMonth() - birthDate.getMonth();
-
-        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        if (age < 18) {
-            return res.status(400).json({ message: "You must be at least 18 years old" });
-        }
-
-
-        const role = await Role.findOne({ roleName });
-        if (!role) {
-            return res.status(400).json({ message: "Role not found. Please provide a valid role." });
-        }
-
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-
-        const newUser = new User({
-            firstName,
-            lastName,
-            email,
-            dob,
-            mobile,
-            password: hashedPassword,
-            roleId: role._id,
-        });
-
-
-        await newUser.save();
-
-
-        generateToken(newUser._id, res);
-
-
-        res.status(201).json({
-            _id: newUser._id,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            email: newUser.email,
-            dob: newUser.dob,
-            mobile: newUser.mobile,
-            roleId: newUser.roleId,
-            roleName: role.roleName,
-        });
-    } catch (error) {
-        console.error("Error in signup controller:", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
+const isAdult = (value) => {
+  const birthDate = new Date(value);
+  if (Number.isNaN(birthDate.getTime())) return false;
+  const adultDate = new Date(birthDate);
+  adultDate.setFullYear(adultDate.getFullYear() + 18);
+  return adultDate <= new Date();
 };
 
-export const login = async (req, res) => {
-    const { email, password } = req.body;
+export const signup = asyncHandler(async (req, res) => {
+  const { firstName, lastName, password, dob, mobile, roleName } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
 
-    try {
+  if (roleName !== "Customer") {
+    throw new AppError(403, "Public signup is only available for customers");
+  }
+  if (![firstName, lastName, email, password, dob, mobile].every(Boolean)) {
+    throw new AppError(400, "All fields are required");
+  }
+  if (password.length < 6) throw new AppError(400, "Password must be at least 6 characters");
+  if (!isAdult(dob)) throw new AppError(400, "You must be at least 18 years old");
 
-        const user = await User.findOne({ email }).populate('roleId');;
-        if (!user) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
+  const [existingUser, role] = await Promise.all([
+    User.exists({ email }),
+    Role.findOne({ roleName: "Customer" }),
+  ]);
+  if (existingUser) throw new AppError(409, "Email already exists");
+  if (!role) throw new AppError(500, "Customer role is not configured");
 
+  const user = await User.create({
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+    email,
+    password: await bcrypt.hash(password, 10),
+    dob,
+    mobile,
+    roleId: role._id,
+  });
 
-        const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        if (!isPasswordCorrect) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
+  generateToken(user._id, res);
+  res.status(201).json(publicUser(user, role.roleName));
+});
 
+export const login = asyncHandler(async (req, res) => {
+  const email = req.body.email?.trim().toLowerCase();
+  const { password } = req.body;
+  if (!email || !password) throw new AppError(400, "Email and password are required");
 
-        generateToken(user._id, res);
-        res.status(200).json({
-            _id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            roleName: user.roleId ? user.roleId.roleName : null,
-            profilePic: user.profilePic || null,
-            mustChangePassword: user.mustChangePassword,
-        });
-    } catch (error) {
-        console.error("Error in login controller:", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-};
+  const user = await User.findOne({ email }).populate("roleId", "roleName");
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    throw new AppError(400, "Invalid credentials");
+  }
+
+  generateToken(user._id, res);
+  res.status(200).json(publicUser(user, user.roleId?.roleName));
+});
 
 export const logout = (req, res) => {
-    try {
-        // Clear the JWT cookie by setting its value to an empty string and expiration to 0
-        res.cookie("jwt", "", { maxAge: 0 });
-        res.status(200).json({ message: "Logged out successfully" });
-    } catch (error) {
-        console.error("Error in logout controller:", error.message);
-        res.status(500).json({ message: "Internal server error" });
-    }
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  });
+  res.status(200).json({ message: "Logged out successfully" });
 };
 
-export const updateProfile = async (req, res) => {
-    try {
-        const { profilePic } = req.body;
-        const userId = req.user._id;
+export const updateProfile = asyncHandler(async (req, res) => {
+  const { profilePic } = req.body;
+  if (!profilePic) throw new AppError(400, "Profile picture is required");
 
-        if (!profilePic) {
-            return res.status(400).json({ message: "Profile picture is required" });
-        }
+  const user = await User.findById(req.user._id);
+  if (!user) throw new AppError(404, "User not found");
 
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
+  const previousPublicId = getFileNameFromUrl(user.profilePic);
+  const upload = await cloudinary.uploader.upload(profilePic, { folder: "users" });
+  user.profilePic = upload.secure_url;
+  await user.save();
 
-        if (user.profilePic) {
-            const publicId = getFileNameFromUrl(user.profilePic);
-            if (publicId) {
-                await cloudinary.uploader.destroy(publicId, { resource_type: "image" });
-            }
-        }
+  if (previousPublicId) {
+    cloudinary.uploader.destroy(previousPublicId, { resource_type: "image" }).catch(() => {});
+  }
 
-        const uploadResponse = await cloudinary.uploader.upload(profilePic, {
-            folder: "users",
-        });
+  res.status(200).json(publicUser(user, req.userRole));
+});
 
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { profilePic: uploadResponse.secure_url },
-            { new: true }
-        );
+export const updatePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword, confirmPassword } = req.body;
+  if (![currentPassword, newPassword, confirmPassword].every(Boolean)) {
+    throw new AppError(400, "All password fields are required");
+  }
+  if (newPassword !== confirmPassword) {
+    throw new AppError(400, "New password and confirm password must match");
+  }
+  if (newPassword.length < 6) throw new AppError(400, "Password must be at least 6 characters");
+  if (newPassword === currentPassword) {
+    throw new AppError(400, "New password must differ from the current password");
+  }
 
-        res.status(200).json(updatedUser);
-    } catch (error) {
-        console.error("Error in updateProfile function:", error.message);
-        res.status(500).json({ message: "Internal server error" });
-    }
+  const user = await User.findById(req.user._id);
+  if (!user) throw new AppError(404, "User not found");
+  if (!(await bcrypt.compare(currentPassword, user.password))) {
+    throw new AppError(400, "Current password is incorrect");
+  }
+
+  user.password = await bcrypt.hash(newPassword, 10);
+  user.mustChangePassword = false;
+  await user.save();
+  res.status(200).json(publicUser(user, req.userRole));
+});
+
+export const checkAuth = (req, res) => {
+  res.status(200).json({
+    ...req.user.toObject(),
+    roleName: req.userRole,
+    userID: req.user._id,
+  });
 };
 
-export const updatePassword = async (req, res) => {
-    try {
+export const totalUser = asyncHandler(async (req, res) => {
+  const roles = await Role.find({ roleName: { $in: ["Customer", "Partner"] } });
+  const roleByName = Object.fromEntries(roles.map((role) => [role.roleName, role._id]));
+  if (!roleByName.Customer || !roleByName.Partner) {
+    throw new AppError(500, "Required roles are not configured");
+  }
 
-        const { currentPassword, newPassword, confirmPassword } = req.body;
-        const userId = req.user._id;
+  const [customers, partners] = await Promise.all([
+    User.find({ roleId: roleByName.Customer }).select("-password"),
+    User.find({ roleId: roleByName.Partner }).select("-password"),
+  ]);
 
-        // Check if all password fields are provided
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            return res.status(400).json({ message: "All password fields are required" });
-        }
-
-        // Ensure new password and confirm password match
-        if (newPassword !== confirmPassword) {
-            return res.status(400).json({ message: "New password and confirm password must match" });
-        }
-        if (newPassword === currentPassword) {
-            return res.status(400).json({ message: "New password cannot be same as current Password" })
-        }
-
-        // Find user by ID
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        // Compare current password with hashed password in DB
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Current password is incorrect" });
-        }
-
-        // Hash new password
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        // Update password in the database
-        await User.findByIdAndUpdate(userId, { password: hashedPassword });
-
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            {
-                password: hashedPassword,
-                mustChangePassword: false,
-            },
-            { new: true }
-        );
-        res.status(200).json(updatedUser);
-    } catch (error) {
-        res.status(500).json({ message: "Internal server error" });
-    }
-};
-
-export const checkAuth = async (req, res) => {
-    try {
-
-        const user = req.user;
-        const role = await Role.findById(user.roleId);
-        if (!role) {
-            return res.status(404).json({ message: 'Role not found' });
-        }
-        const userWithRole = {
-            ...user.toObject(),
-            roleName: role.roleName,
-            mustChangePassword: user.mustChangePassword,
-            userID: user._id,
-        };
-
-        res.status(200).json(userWithRole);
-    } catch (error) {
-        console.log("Error in checkAuth controller", error.message);
-        res.status(500).json({ message: "Internal Server Error" });
-    }
-};
-
-export const totalUser = async (req, res) => {
-    try {
-        const customerRole = await Role.findOne({ roleName: 'Customer' });
-        const partnerRole = await Role.findOne({ roleName: 'Partner' });
-
-        if (!customerRole || !partnerRole) {
-            return res.status(404).json({ error: 'Role not Found' });
-        }
-
-        const customers = await User.find({ roleId: customerRole._id }).select('-password');
-        const partners = await User.find({ roleId: partnerRole._id }).select('-password');
-
-        // Count users
-        const totalCustomers = customers.length;
-        const totalPartners = partners.length;
-
-        res.status(200).json({
-            totalCustomers,
-            totalPartners,
-            customerDetails: customers,
-            partnerDetails: partners,
-        });
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500), json({ error: 'Internal Server Error' });
-    }
-};
+  res.status(200).json({
+    totalCustomers: customers.length,
+    totalPartners: partners.length,
+    customerDetails: customers,
+    partnerDetails: partners,
+  });
+});

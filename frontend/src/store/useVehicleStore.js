@@ -321,7 +321,6 @@ export const useVehicleStore = create((set) => ({
                     bookingDetails: data.bookingDetails, // Store the fetched booking data
                 });
 
-                console.log("✅ Booking history fetched successfully:", data.bookingDetails);
             } else {
                 console.error("❌ Invalid response structure for booking history:", data);
                 toast.error("Received invalid booking data");
@@ -333,7 +332,6 @@ export const useVehicleStore = create((set) => ({
     },
     getBookingAnalytics: async (request) => {
         try {
-            console.log("📡 Fetching booking analytics with request:", request);
             const res = await axiosInstance.post("/vehicle/getBookingAnalytics", request);
 
             if (res.status !== 200) {
@@ -351,7 +349,6 @@ export const useVehicleStore = create((set) => ({
                     ownVehicleStats: data.ownVehicleStats || []
                 });
 
-                console.log("✅ Booking analytics fetched successfully:", data);
             } else {
                 console.warn("⚠️ Unexpected response format:", data);
                 toast.error("Received invalid booking data format");
@@ -372,7 +369,6 @@ export const useVehicleStore = create((set) => ({
 
     exportAnalyticsReport: async (request) => {
         try {
-            console.log("📡 Exporting analytics report with request:", request);
             const res = await axiosInstance.post("/vehicle/exportAnalyticsReport", request, {
                 responseType: 'blob', // Ensures response is handled as a file
             });
@@ -392,7 +388,6 @@ export const useVehicleStore = create((set) => ({
             a.click();
             a.remove();
 
-            console.log("✅ Report exported successfully.");
             toast.success("Analytics report downloaded!");
 
         } catch (error) {

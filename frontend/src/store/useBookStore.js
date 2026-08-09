@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../lib/apiError.js";
 
 export const useBookStore = create((set) => ({
     isBookMark: false,
@@ -20,8 +21,7 @@ export const useBookStore = create((set) => ({
                 toast.error(res.data.message);
             }
         } catch (error) {
-            console.error("Bookmark error:", error);
-            toast.error("Failed to bookmark vehicle.");
+            toast.error(getApiErrorMessage(error, "Failed to bookmark vehicle"));
         }
     },
 
@@ -37,8 +37,7 @@ export const useBookStore = create((set) => ({
                 toast.error(res.data.message);
             }
         } catch (error) {
-            console.error("Unbookmark error:", error);
-            toast.error("Failed to remove bookmark.");
+            toast.error(getApiErrorMessage(error, "Failed to remove bookmark"));
         }
     },
 
@@ -50,8 +49,7 @@ export const useBookStore = create((set) => ({
             } else {
                 return false;
             }
-        } catch (error) {
-            console.error("Error checking bookmark:", error);
+        } catch {
             return false;
         }
     },
@@ -66,7 +64,7 @@ export const useBookStore = create((set) => ({
                 set({ bookmarks: [] }); // Ensure bookmarks state is empty if none are found
             }
         } catch (error) {
-            console.error("Error fetching bookmarks:", error);
+            toast.error(getApiErrorMessage(error, "Failed to fetch bookmarks"));
         }
     },
 
@@ -75,8 +73,7 @@ export const useBookStore = create((set) => ({
             const res = await axiosInstance.post("/book/verifyRide", data);
             return res.data; // Return response data
         } catch (error) {
-            console.error("Error verifying ride:", error);
-            toast.error(error.response?.data?.message || "Failed to verify ride");
+            toast.error(getApiErrorMessage(error, "Failed to verify ride"));
             throw error; // Rethrow error for handling in the calling function
         }
     },
@@ -86,8 +83,7 @@ export const useBookStore = create((set) => ({
             const res = await axiosInstance.post("/book/UnverifyRide", data);
             return res.data; // Return response data
         } catch (error) {
-            console.error("Error verifying ride:", error);
-            toast.error(error.response?.data?.message || "Failed to Cancel verify ride");
+            toast.error(getApiErrorMessage(error, "Failed to cancel ride verification"));
             throw error; // Rethrow error for handling in the calling function
         }
     },
@@ -97,10 +93,7 @@ export const useBookStore = create((set) => ({
             const res = await axiosInstance.post("/book/checkBookStatus", data);
             return res.data; // Return the response data to the caller
         } catch (error) {
-            console.error("Error checking booking status:", error);
-
-            // Display error message in toast if available, otherwise show a generic message
-            toast.error(error.response?.data?.message || "Failed to fetch booking status");
+            toast.error(getApiErrorMessage(error, "Failed to fetch booking status"));
 
             throw error; // Rethrow the error so the calling function can handle it
         }

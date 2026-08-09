@@ -4,7 +4,7 @@ const vehicleRatingSchema = new mongoose.Schema(
     {
         vehicleId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Vehicle', // Reference to the Vehicle model
+            ref: 'VehicleInstance',
             required: true,
         },
         userId: {
@@ -28,6 +28,9 @@ const vehicleRatingSchema = new mongoose.Schema(
         timestamps: true, // Enable timestamps (createdAt and updatedAt)
     }
 );
+
+vehicleRatingSchema.index({ vehicleId: 1, userId: 1 }, { unique: true });
+vehicleRatingSchema.index({ vehicleId: 1, createdAt: -1 });
 
 // Create the Mongoose model
 const VehicleRating = mongoose.model('VehicleRating', vehicleRatingSchema);

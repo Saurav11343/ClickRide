@@ -11,6 +11,7 @@ import { CustomerSideNav } from "../../component/Customer/CustomerSideNav";
 import { useVehicleStore } from '../../store/useVehicleStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useBookStore } from '../../store/useBookStore';
+import toast from "react-hot-toast";
 
 const BookingDetailsPage = () => {
     const { bookingID } = useParams();
@@ -215,7 +216,6 @@ const BookingDetailsPage = () => {
 
     const handleOtpVerification = () => {
         if (enteredOtp === booking?.otp?.toString()) {
-            console.log(booking?.otp)
             setIsOtpMatched(true);
         } else {
             setIsOtpMatched(false);
@@ -223,12 +223,6 @@ const BookingDetailsPage = () => {
     };
 
     const [vehicleHandedOver, setVehicleHandedOver] = useState(false);
-
-    if (booking) {
-        console.log(booking.startDateTime);
-    } else {
-        console.log("Booking is null or undefined");
-    }
 
     const handleHandOver = async () => {
         try {
@@ -471,7 +465,6 @@ const BookingDetailsPage = () => {
                                             {/* Display accessories with prices */}
                                             {formatAccessoriesWithPrices(booking.accessories)}
 
-                                            {console.log(booking.accessories)}
 
                                             {/* Text-only formatted version (hidden by default, toggle as needed) */}
                                             <div className="mt-2 text-sm text-gray-500 hidden">

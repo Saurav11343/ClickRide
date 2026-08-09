@@ -1,33 +1,33 @@
 import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
 import User from "../models/user.model.js";
+import { AppError, asyncHandler } from "./error.middleware.js";
 
-export const protectRoute = async (req, res, next) => {
-    try {
-        const token = req.cookies.jwt;
+export const protectRoute = asyncHandler(async (req, res, next) => {
+  const token = req.cookies.jwt;
+  if (!token) throw new AppError(401, "Authentication required");
 
-        if (!token) {
-            return res.status(401).json({ message: "Unauthorized - No Token Provied" });
-        }
+  let decoded;
+  try {
+    decoded = jwt.verify(token, env.jwtSecret);
+  } catch {
+    throw new AppError(401, "Invalid or expired session");
+  }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const user = await User.findById(decoded.userId)
+    .select("-password")
+    .populate("roleId", "roleName");
 
-        if (!decoded) {
-            return res.status(401).json({ message: "Unauthorized - Invaild token" });
-        }
+  if (!user) throw new AppError(401, "User no longer exists");
 
-        const user = await User.findById(decoded.userId).select("-password");
+  req.user = user;
+  req.userRole = user.roleId?.roleName;
+  next();
+});
 
-        if (!user) {
-            return res.status(404).json({ message: "User not Found" });
-
-        }
-
-        req.user = user
-
-        next()
-
-    } catch (error) {
-        console.log("Error in protectRoute middleware:", error.message);
-        res.status(500).json({ message: "Internal server error" });
-    }
+export const requireRole = (...allowedRoles) => (req, res, next) => {
+  if (!req.userRole || !allowedRoles.includes(req.userRole)) {
+    return next(new AppError(403, "Forbidden"));
+  }
+  return next();
 };

@@ -1,0 +1,58 @@
+.server-wakeup {
+  position: relative;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  padding: 24px;
+  color: #f8fafc;
+  background: radial-gradient(circle at top, #172554 0%, #090d1b 48%, #030712 100%);
+}
+
+.server-wakeup__glow {
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 999px;
+  opacity: 0.22;
+  filter: blur(80px);
+}
+
+.server-wakeup__glow--one { top: -140px; left: -80px; background: #22d3ee; }
+.server-wakeup__glow--two { right: -100px; bottom: -160px; background: #8b5cf6; }
+
+.server-wakeup__card {
+  position: relative;
+  width: min(100%, 520px);
+  padding: 42px 38px;
+  text-align: center;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 28px;
+  background: rgba(15, 23, 42, 0.72);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(18px);
+}
+
+.server-wakeup__logo { width: 74px; height: 74px; margin: 0 auto 24px; object-fit: contain; }
+.server-wakeup__eyebrow { margin: 22px 0 8px; color: #67e8f9; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.22em; }
+.server-wakeup h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.25rem); line-height: 1.05; letter-spacing: -0.04em; }
+.server-wakeup__detail { max-width: 400px; margin: 18px auto 26px; color: #cbd5e1; line-height: 1.65; }
+
+.server-wakeup__loader { display: flex; justify-content: center; gap: 7px; height: 14px; }
+.server-wakeup__loader span { width: 10px; height: 10px; border-radius: 50%; background: #22d3ee; animation: wake-bounce 1.15s infinite ease-in-out; }
+.server-wakeup__loader span:nth-child(2) { animation-delay: 0.14s; }
+.server-wakeup__loader span:nth-child(3) { animation-delay: 0.28s; }
+
+.server-wakeup__progress { height: 4px; overflow: hidden; border-radius: 99px; background: rgba(148, 163, 184, 0.16); }
+.server-wakeup__progress span { display: block; width: 45%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #22d3ee, #8b5cf6); animation: wake-progress 2.4s infinite ease-in-out; }
+.server-wakeup__attempt { margin: 14px 0 0; color: #64748b; font-size: 0.78rem; }
+.server-wakeup button { margin-top: 22px; padding: 11px 24px; color: #07111e; font-weight: 800; border: 0; border-radius: 999px; cursor: pointer; background: linear-gradient(135deg, #67e8f9, #a78bfa); }
+.server-wakeup button:hover { transform: translateY(-1px); box-shadow: 0 10px 30px rgba(34, 211, 238, 0.2); }
+
+@keyframes wake-bounce { 0%, 70%, 100% { transform: translateY(0); opacity: 0.35; } 35% { transform: translateY(-8px); opacity: 1; } }
+@keyframes wake-progress { 0% { transform: translateX(-110%); } 100% { transform: translateX(240%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .server-wakeup__loader span,
+  .server-wakeup__progress span { animation: none; }
+}

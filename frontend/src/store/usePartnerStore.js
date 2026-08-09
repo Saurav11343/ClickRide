@@ -1,7 +1,7 @@
 import { create } from "zustand"
 import { axiosInstance } from "../lib/axios.js"
 import toast from "react-hot-toast";
-import { Link, useNavigate } from 'react-router-dom';
+import { getApiErrorMessage } from "../lib/apiError.js";
 
 
 export const usePartnerStore = create((set) => ({
@@ -19,7 +19,7 @@ export const usePartnerStore = create((set) => ({
             toast.success("Account successfully created")
             return { success: true };
         } catch (error) {
-            toast.error(error.response.data.message);
+            toast.error(getApiErrorMessage(error, "Partner signup failed"));
             return { success: false };
 
         } finally {
@@ -36,8 +36,7 @@ export const usePartnerStore = create((set) => ({
                 partnerRequestDetails: data.partnerRequestDetails,
             });
         } catch (error) {
-            console.error("Error fetching user stats:", error);
-            toast.error("Failed to fetch user data");
+            toast.error(getApiErrorMessage(error, "Failed to fetch partner requests"));
         }
     },
     rejectPartnerRequest: async (partnerID) => {
@@ -48,8 +47,7 @@ export const usePartnerStore = create((set) => ({
             // If you want to return specific data from the response
             return { success: true, data: res.data };
         } catch (error) {
-            console.error("Error deleting partner request:", error);
-            toast.error("Failed to delete partner request");
+            toast.error(getApiErrorMessage(error, "Failed to delete partner request"));
             return { success: false };
         } finally {
             set({ isRejecting: false });
@@ -61,8 +59,7 @@ export const usePartnerStore = create((set) => ({
             const res = await axiosInstance.post("/partner/validatePartnerRequest", { partnerID });
             return { success: true, data: res.data };
         } catch (error) {
-            console.error("Error validating partner request:", error);
-            toast.error("Failed to validate partner request");
+            toast.error(getApiErrorMessage(error, "Failed to validate partner request"));
             return { success: false };
         } finally {
             set({ isValidating: false });

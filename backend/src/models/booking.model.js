@@ -29,7 +29,7 @@ const bookingSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["Booked", "Done", "Cancelled", "Active"],
+        enum: ["Booked", "Completed", "Cancelled", "Active"],
         default: "Booked",
     },
     otp: {
@@ -39,6 +39,10 @@ const bookingSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+bookingSchema.index({ userID: 1, createdAt: -1 });
+bookingSchema.index({ vehicleID: 1, startDateTime: 1, endDateTime: 1 });
+bookingSchema.index({ status: 1, endDateTime: 1 });
 
 const Booking = mongoose.model("Booking", bookingSchema);
 export default Booking;

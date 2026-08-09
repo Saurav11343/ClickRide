@@ -246,7 +246,6 @@ export default function AddVehicle() {
     data.vehicleDocument = selectedDocument;
     try {
       const response = await addVehicles(data);
-      console.log(response);
       if (response && response.success) {
         toast.success("Vehicle successfully added!");
 
@@ -286,8 +285,6 @@ export default function AddVehicle() {
         "N/A";
       const pincode = address.postcode || address["ISO3166-2-lvl4"] || "N/A"; // Alternative for postal code
 
-      console.log("Selected Location:", { lat, lng, state, country, city });
-      console.log(data);
       // Store values
       setValue("latitude", lat);
       setValue("longitude", lng);

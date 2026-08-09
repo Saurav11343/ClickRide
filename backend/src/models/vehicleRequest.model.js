@@ -28,6 +28,9 @@ const vehicleUpdateRequestSchema = mongoose.Schema({
     timestamps: true
 });
 
+vehicleUpdateRequestSchema.index({ status: 1, createdAt: -1 });
+vehicleUpdateRequestSchema.index({ vehicleId: 1, status: 1 });
+
 const VehicleRequest = mongoose.model("VehicleRequest", vehicleUpdateRequestSchema);
 
 export default VehicleRequest;

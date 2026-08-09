@@ -73,7 +73,7 @@ export default function DeleteModel() {
                 toast.success('Vehicle model deleted successfully.');
                 navigate('/ManageModel');
             } else {
-
+                toast.error(response?.message || 'Unable to delete vehicle model.');
             }
         } catch (error) {
             toast.error('An error occurred while deleting the vehicle model.');

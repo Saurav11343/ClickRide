@@ -1,43 +1,23 @@
-import { verificationEmailTemplate } from "./emailTemplate.js";
-import { rejectEmailTemplate } from "./emailTemplate.js";
-import { transporter } from "./nodemailer.config.js";
+import { getMailer } from "../../lib/mailer.js";
+import { rejectEmailTemplate, verificationEmailTemplate } from "./emailTemplate.js";
 
-export const sendVerificationEmail = async (email, verificationToken) => {
-  try {
-    const response = await transporter.sendMail({
-      from: {
-        name: "ClickRide",
-        address: "official.clickride@gmail.com",
-      },
-      to: email,
-      subject: "Verify you account for ClickRide ", //subject line
-      // text: "This is a test email", //plain text body
-      html: verificationEmailTemplate(verificationToken), //html body
-    });
-    console.log("Verification email sent successfully");
-  } catch (error) {
-    console.log("Error in sending verification email:", error.message);
-    throw new Error("Error in sending verification email");
-  }
-};
+const sender = () => ({
+  name: "ClickRide",
+  address: process.env.USER_EMAIL,
+});
 
-export const rejectEmail = async (email, fullname) => {
-  try {
-    const response = await transporter.sendMail({
-      from: {
-        name: "ClickRide",
-        address: "official.clickride@gmail.com",
-      }, //sender address
-      subject: "Rejection  letter", //subject line,
-      to: email, //receiver email, [can be sent to multiple emails by passing an array of emails]
-      html: rejectEmailTemplate(fullname), //html body
-    });
-    console.log("Rejection email sent successfully");
-  } catch (error) {
-    console.error("Error in sending welcome email:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Error in sending welcome email",
-    });
-  }
-};
+export const sendVerificationEmail = (email, temporaryPassword) =>
+  getMailer().sendMail({
+    from: sender(),
+    to: email,
+    subject: "Your ClickRide partner account",
+    html: verificationEmailTemplate(temporaryPassword),
+  });
+
+export const rejectEmail = (email, fullName) =>
+  getMailer().sendMail({
+    from: sender(),
+    to: email,
+    subject: "ClickRide partner application update",
+    html: rejectEmailTemplate(fullName),
+  });
