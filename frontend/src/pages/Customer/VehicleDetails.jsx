@@ -75,7 +75,6 @@ export default function VehicleDetails() {
                 vehicleId: vehicleID,
                 userId: authUser._id,
             }
-            console.log(data)
             if (isBookmarked) {
                 await unsetbookmark(data);
                 setIsBookmarked(false);

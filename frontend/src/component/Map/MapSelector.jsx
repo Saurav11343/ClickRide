@@ -25,7 +25,6 @@ const MapSelector = ({
             click(event) {
                 if (!disableMapMove) {
                     const { lat, lng } = event.latlng;
-                    console.log("Map clicked at:", lat, lng);
                     setPosition({ lat, lng });
                     onLocationChange(lat, lng);
                 }

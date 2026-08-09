@@ -1,181 +1,138 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
-import { generateToken, getFileNameFromUrl } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import { getFileNameFromUrl } from "../lib/utils.js";
+import { AppError, asyncHandler } from "../middleware/error.middleware.js";
+import { rejectEmail, sendVerificationEmail } from "../middleware/nodemailer/emails.js";
 import PartnerRequest from "../models/partnerRequest.model.js";
-import User from "../models/user.model.js";
 import Role from "../models/role.model.js";
-import { sendVerificationEmail } from "../middleware/nodemailer/emails.js";
-import { rejectEmail } from "../middleware/nodemailer/emails.js";
+import User from "../models/user.model.js";
 
-export const partnerSignup = async (req, res) => {
-    const { firstName, lastName, email, dob, mobile, roleName, gender, profilePic, profileVideo } = req.body;
-
-    try {
-        if (!firstName || !lastName || !email || !dob || !mobile || !roleName || !gender || !profilePic || !profileVideo) {
-            return res.status(400).json({ message: "All fields are required" });
-        }
-
-        const existingUser = await PartnerRequest.findOne({ email }) || await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "Email already exists" });
-        }
-
-        const birthDate = new Date(dob);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDifference = today.getMonth() - birthDate.getMonth();
-
-        if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        if (age < 18) {
-            return res.status(400).json({ message: "You must be at least 18 years old" });
-        }
-
-        const role = await Role.findOne({ roleName });
-        if (!role) {
-            return res.status(400).json({ message: "Role not found. Please provide a valid role." });
-        }
-
-        const profilePicUpload = await cloudinary.uploader.upload(profilePic, {
-            folder: "partners/profile_pics",
-            resource_type: "image",
-        });
-
-        const profileVideoUpload = await cloudinary.uploader.upload(profileVideo, {
-            folder: "partners/profile_videos",
-            resource_type: "video",
-        });
-
-        const newRequest = new PartnerRequest({
-            firstName,
-            lastName,
-            email,
-            dob,
-            mobile,
-            gender,
-            profilePic: profilePicUpload.secure_url,
-            profileVideo: profileVideoUpload.secure_url,
-            password: undefined,
-            roleId: role._id,
-        });
-
-        await newRequest.save();
-
-        res.status(201).json({
-            message: "Partner request submitted successfully. Awaiting admin approval.",
-            requestId: newRequest._id,
-        });
-
-    } catch (error) {
-        console.error("Error in partnerSignup controller:", error);
-        res.status(500).json({ message: "Internal Server Error", error: error.message });
-    }
+const destroyAsset = async (url, resourceType) => {
+  const publicId = getFileNameFromUrl(url);
+  if (publicId) await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 };
 
-export const partnerRequest = async (req, res) => {
-    try {
-        const partnerRequest = await PartnerRequest.find().select('-password');
+export const partnerSignup = asyncHandler(async (req, res) => {
+  const {
+    firstName,
+    lastName,
+    dob,
+    mobile,
+    roleName,
+    gender,
+    profilePic,
+    profileVideo,
+  } = req.body;
+  const email = req.body.email?.trim().toLowerCase();
 
-        // Count users
-        const totalPartnerRequest = partnerRequest.length;
+  if (roleName !== "Partner") throw new AppError(403, "Invalid partner role");
+  if (![firstName, lastName, email, dob, mobile, gender, profilePic, profileVideo].every(Boolean)) {
+    throw new AppError(400, "All fields are required");
+  }
 
-        res.status(200).json({
-            totalPartnerRequest,
-            partnerRequestDetails: partnerRequest,
-        });
-    } catch (error) {
-        console.error('Error fetching users:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-};
+  const birthDate = new Date(dob);
+  const adultDate = new Date(birthDate);
+  adultDate.setFullYear(adultDate.getFullYear() + 18);
+  if (Number.isNaN(birthDate.getTime()) || adultDate > new Date()) {
+    throw new AppError(400, "You must be at least 18 years old");
+  }
 
-export const deletePartnerRequest = async (req, res) => {
-    const { partnerID } = req.body;
+  const [pending, existingUser, role] = await Promise.all([
+    PartnerRequest.exists({ email }),
+    User.exists({ email }),
+    Role.findOne({ roleName: "Partner" }),
+  ]);
+  if (pending || existingUser) throw new AppError(409, "Email already exists");
+  if (!role) throw new AppError(500, "Partner role is not configured");
 
-    try {
-        if (!partnerID) {
-            return res.status(400).json({ message: "Partner ID is not provided" });
-        }
-        const partnerRequest = await PartnerRequest.findOne({ _id: partnerID });
+  const [pictureUpload, videoUpload] = await Promise.all([
+    cloudinary.uploader.upload(profilePic, {
+      folder: "partners/profile_pics",
+      resource_type: "image",
+    }),
+    cloudinary.uploader.upload(profileVideo, {
+      folder: "partners/profile_videos",
+      resource_type: "video",
+    }),
+  ]);
 
-        if (!partnerRequest) {
-            return res.status(404).json({ message: "PartnerRequest not found" });
-        }
+  try {
+    const request = await PartnerRequest.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email,
+      dob,
+      mobile,
+      gender,
+      profilePic: pictureUpload.secure_url,
+      profileVideo: videoUpload.secure_url,
+      roleId: role._id,
+    });
 
-        const email = partnerRequest.email;
-        const fullname = partnerRequest.firstName + " " + partnerRequest.lastName;
+    res.status(201).json({
+      message: "Partner request submitted successfully. Awaiting admin approval.",
+      requestId: request._id,
+    });
+  } catch (error) {
+    await Promise.allSettled([
+      destroyAsset(pictureUpload.secure_url, "image"),
+      destroyAsset(videoUpload.secure_url, "video"),
+    ]);
+    throw error;
+  }
+});
 
-        const profileVideoId = await getFileNameFromUrl(partnerRequest.profileVideo);
-        const profilePicId = await getFileNameFromUrl(partnerRequest.profilePic);
+export const partnerRequest = asyncHandler(async (req, res) => {
+  const requests = await PartnerRequest.find().select("-password").sort({ createdAt: -1 });
+  res.status(200).json({
+    totalPartnerRequest: requests.length,
+    partnerRequestDetails: requests,
+  });
+});
 
-        const Videoresult = await cloudinary.uploader.destroy(profileVideoId, { resource_type: "video" });
-        const Picresult = await cloudinary.uploader.destroy(profilePicId, { resource_type: "image" });
+export const deletePartnerRequest = asyncHandler(async (req, res) => {
+  const request = await PartnerRequest.findById(req.body.partnerID);
+  if (!request) throw new AppError(404, "Partner request not found");
 
-        if (Videoresult.result === "ok") {
-            console.log("Video deleted successfully");
-        } else {
-            console.error("Failed to delete video:", Videoresult);
-        }
-        if (Picresult.result === "ok") {
-            console.log("Image deleted successfully");
-        } else {
-            console.error("Failed to delete image:", Picresult);
-        }
+  await Promise.allSettled([
+    destroyAsset(request.profileVideo, "video"),
+    destroyAsset(request.profilePic, "image"),
+    rejectEmail(request.email, `${request.firstName} ${request.lastName}`),
+  ]);
+  await request.deleteOne();
 
-        await PartnerRequest.deleteOne({ _id: partnerID });
+  res.status(200).json({ message: "Partner request deleted successfully" });
+});
 
-        await rejectEmail(email, fullname)
+export const validatePartnerRequest = asyncHandler(async (req, res) => {
+  const request = await PartnerRequest.findById(req.body.partnerID);
+  if (!request) throw new AppError(404, "Partner request not found");
+  if (await User.exists({ email: request.email })) {
+    throw new AppError(409, "A user with this email already exists");
+  }
 
-        return res.status(200).json({ message: "PartnerRequest deleted successfully" });
-    } catch (error) {
+  const temporaryPassword = crypto.randomInt(100000, 1000000).toString();
+  const user = await User.create({
+    firstName: request.firstName,
+    lastName: request.lastName,
+    email: request.email,
+    password: await bcrypt.hash(temporaryPassword, 10),
+    mobile: request.mobile,
+    dob: request.dob,
+    profilePic: request.profilePic,
+    roleId: request.roleId,
+    gender: request.gender,
+    mustChangePassword: true,
+  });
 
-        console.error(error);
-        return res.status(500).json({ message: "Internal Server error", error: error.message });
-    }
-};
+  try {
+    await sendVerificationEmail(request.email, temporaryPassword);
+    await request.deleteOne();
+  } catch (error) {
+    await user.deleteOne();
+    throw error;
+  }
 
-export const validatePartnerRequest = async (req, res) => {
-    const { partnerID } = req.body;
-    try {
-        if (!partnerID) {
-            return res.status(400).json({ message: "Partner ID is not provided" });
-        }
-
-        const partnerRequest = await PartnerRequest.findOne({ _id: partnerID });
-
-        if (!partnerRequest) {
-            return res.status(404).json({ message: "PartnerRequest not found" });
-        }
-
-        const email = partnerRequest.email;
-        const newPassword = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(newPassword, salt);
-
-        // Insert partner data into Users table
-        const newUser = new User({
-            firstName: partnerRequest.firstName,
-            lastName: partnerRequest.lastName,
-            email: partnerRequest.email,
-            password: hashedPassword,
-            mobile: partnerRequest.mobile,
-            dob: partnerRequest.dob,
-            profilePic: partnerRequest.profilePic,
-            roleId: partnerRequest.roleId,
-            gender: partnerRequest.gender,
-            mustChangePassword: true,
-        });
-
-        await newUser.save();
-        await PartnerRequest.deleteOne({ _id: partnerID });
-
-        await sendVerificationEmail(email, newPassword);
-        return res.status(200).json({ email, newPassword });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: "Internal Server error", error: error.message });
-    }
-};
+  res.status(200).json({ message: "Partner approved and credentials emailed" });
+});

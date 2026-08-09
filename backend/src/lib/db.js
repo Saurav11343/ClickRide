@@ -1,10 +1,10 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
+import { env } from "../config/env.js";
 
 export const connectDB = async () => {
-    try {
-        const conn = await mongoose.connect(process.env.MONGO_URI);
-        console.log(`MongoDB connected: ${conn.connection.host}`);
-    } catch (error) {
-        console.log("MongoBd connection error:", error)
-    }
+    return mongoose.connect(env.mongoUri, {
+        serverSelectionTimeoutMS: 15000,
+    });
 };
+
+export const disconnectDB = () => mongoose.disconnect();

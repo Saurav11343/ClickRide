@@ -169,7 +169,6 @@ export default function ManageVehicle() {
 
   useEffect(() => {
     if (!totalUpdateResponce || !Array.isArray(totalUpdateResponce)) {
-      console.log("Invalid or empty data received.");
       return;
     }
 
@@ -219,34 +218,23 @@ export default function ManageVehicle() {
       };
 
       // Check if selectedImgs array contains any values
-      if (!data.selectedImgs || data.selectedImgs.length === 0) {
-        console.log("No images to append!");
-      } else {
+      if (data.selectedImgs?.length > 0) {
         // Add images to the formdata if they are base64 strings or URLs
         formdata.selectedImgs = [];
 
-        data.selectedImgs.forEach((img, index) => {
-          console.log("Processing image at index", index, ":", img); // Debug log
+        data.selectedImgs.forEach((img) => {
 
           if (img && img.startsWith("data:image")) {
             // Check if it's a base64 string
-            console.log(`Appending base64 image at index ${index}:`, img);
             formdata.selectedImgs.push(img);
           } else if (img && img.startsWith("http")) {
             // Check if it's a URL
-            console.log(`Appending image URL at index ${index}:`, img);
             formdata.selectedImgs.push(img);
-          } else {
-            console.log(
-              `Skipping invalid or empty value at index ${index}:`,
-              img,
-            );
           }
         });
       }
 
       // Log the formdata object before sending to the API
-      console.log("FormData:", formdata);
 
       // Call the API function to update vehicle data
       const updatedVehicleData = await UpdateOneVehicleData(formdata);
@@ -365,8 +353,6 @@ export default function ManageVehicle() {
         "N/A";
       const pincode = address.postcode || address["ISO3166-2-lvl4"] || "N/A"; // Alternative for postal code
 
-      console.log("Selected Location:", { lat, lng, state, country, city });
-      console.log(data);
       // Store values
       setValue("latitude", lat);
       setValue("longitude", lng);
@@ -382,7 +368,7 @@ export default function ManageVehicle() {
   };
   return (
     <div className="overflow-x-hidden">
-      <form onSubmit={(e) => handleSubmit(onSubmit)(e)}>
+      <form onSubmit={handleSubmit(handleUpdate)}>
         {/* Hidden vehicleId field */}
         <input type="hidden" {...register("vehicleId")} />
 

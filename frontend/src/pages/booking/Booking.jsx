@@ -129,7 +129,6 @@ export default function Booking() {
       accessories,
     };
 
-    console.log("Booking Details:", bookingDetails);
 
     try {
       // Create an order for payment via the Payment Store.
@@ -160,7 +159,6 @@ export default function Booking() {
         },
         // Handler to be called on successful payment
         handler: async function (response) {
-          console.log("Razorpay response:", response);
           try {
             // Prepare verification payload
             const verificationPayload = {
@@ -168,17 +166,14 @@ export default function Booking() {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             };
-            console.log("Verification payload:", verificationPayload);
 
             // Verify payment via the Payment Store
             const verifyResponse = await verifyPayment(verificationPayload);
-            console.log("Backend verification response:", verifyResponse);
 
             // Check for success in the verification response
             if (verifyResponse && verifyResponse.success) {
               // Payment is verified, proceed with vehicle booking
               const book = await bookVehicle(bookingDetails);
-              console.log("Book Response:", book);
               if (book?.success) {
                 toast.success("Vehicle Successfully Booked!");
                 navigate("/ViewVehicle");
@@ -199,7 +194,6 @@ export default function Booking() {
         callback_url: "http://localhost:3000/payment-success",
       };
 
-      console.log("Razorpay Options:", options);
       // Open Razorpay Checkout
       const rzp = new window.Razorpay(options);
       rzp.open();

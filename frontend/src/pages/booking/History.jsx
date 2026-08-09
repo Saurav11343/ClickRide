@@ -22,6 +22,7 @@ import { useAuthStore } from "../../store/useAuthStore";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import BookingPDF from "../../component/pdf/BookingPDF";
+import toast from "react-hot-toast";
 const BookingCard = ({ booking, onCancel, navigate, getStatusColor }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full max-w-sm sm:w-80 md:w-96">
@@ -202,7 +203,6 @@ export default function History() {
 
   const confirmCancelBooking = async () => {
     try {
-      console.log("Attempting to cancel booking:", selectedBooking._id);
 
       const formData = { bookingID: selectedBooking._id };
       const response = await cancelVehicle(formData);

@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
+import { getApiErrorMessage } from "../lib/apiError.js";
 
-export const usePaymentStore = create((set) => ({
+export const usePaymentStore = create(() => ({
     createOrder: async (orderData) => {
         try {
             // Call the backend endpoint to create an order
@@ -10,8 +11,7 @@ export const usePaymentStore = create((set) => ({
             toast.success("Order created successfully!");
             return res.data; // Return the created order data
         } catch (error) {
-            console.error("Error creating order:", error);
-            toast.error(error.response?.data?.message || "Failed to create order");
+            toast.error(getApiErrorMessage(error, "Failed to create order"));
             throw error;
         }
     },
@@ -23,8 +23,7 @@ export const usePaymentStore = create((set) => ({
             // Depending on your API, this might return a boolean or an object
             return res.data;
         } catch (error) {
-            console.error("Error verifying payment:", error);
-            toast.error(error.response?.data?.message || "Failed to verify payment");
+            toast.error(getApiErrorMessage(error, "Failed to verify payment"));
             throw error;
         }
     }

@@ -1,182 +1,83 @@
-import { reviewSchema, editReviewSchema, deleteReviewSchema, fetchReviewSchema } from "../validators/review.validator.js";
+import mongoose from "mongoose";
+import * as Yup from "yup";
+import { AppError, asyncHandler } from "../middleware/error.middleware.js";
 import VehicleRating from "../models/vehicleRating.model.js";
-import User from "../models/user.model.js"
-import * as Yup from 'yup';
-import mongoose from 'mongoose';
-const { ObjectId } = mongoose.Types;
-export const addReview = async (req, res) => {
-    const {
-        vehicleId,
-        rating,
-        reviewText
-    } = req.body;
+import {
+  deleteReviewSchema,
+  editReviewSchema,
+  fetchReviewSchema,
+  reviewSchema,
+} from "../validators/review.validator.js";
 
-    const userId = req.user._id;
-    try {
-        await reviewSchema.validate(
-            { vehicleId, userId, rating, reviewText },
-            { abortEarly: false }
-        );
-
-        const newReview = new VehicleRating({
-            vehicleId,
-            userId,
-            rating,
-            reviewText,
-        });
-
-        const savedReview = await newReview.save();
-        res.status(201).json(savedReview);
-    } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-            // Handle Yup validation errors
-            return res.status(400).json({ errors: error.errors });
-        } else {
-
-            console.error('Error adding review:', error);
-            res.status(500).json({ message: 'Internal server error' });
-        }
+const validate = async (schema, data) => {
+  try {
+    return await schema.validate(data, { abortEarly: false, stripUnknown: true });
+  } catch (error) {
+    if (error instanceof Yup.ValidationError) {
+      throw new AppError(400, "Validation failed", error.errors);
     }
+    throw error;
+  }
 };
 
-export const editReview = async (req, res) => {
-    const {
-        reviewId,
-        rating,
-        reviewText
-    } = req.body;
-
-    const userId = req.user._id;
-    const userIdObjectId = new ObjectId(userId);
-
-    try {
-        await editReviewSchema.validate({ reviewId, rating, reviewText }, { abortEarly: false });
-        const review = await VehicleRating.findById(reviewId);
-
-        if (!review) {
-            return res.status(404).json({ message: 'Review not found' });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-        if (!review.userId.equals(userIdObjectId)) {
-            return res.status(403).json({ message: 'You are not authorized to edit this review' });
-        }
-
-
-        // Update the review fields if provided
-        if (rating !== undefined) {
-            review.rating = rating;
-        }
-        if (reviewText !== undefined) {
-            review.reviewText = reviewText;
-        }
-
-        const updatedReview = await review.save();
-        res.status(200).json(updatedReview);
-    } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-
-            return res.status(400).json({ errors: error.errors });
-        } else {
-
-            console.error('Error editing review:', error);
-            res.status(500).json({ message: 'Internal server error' });
-        }
-    }
+const findOwnedReview = async (reviewId, userId) => {
+  const review = await VehicleRating.findById(reviewId);
+  if (!review) throw new AppError(404, "Review not found");
+  if (!review.userId.equals(userId)) throw new AppError(403, "Forbidden");
+  return review;
 };
 
-export const deleteReview = async (req, res) => {
-    const {
-        reviewId
-    } = req.body;
-    const userId = req.user._id;
-    const userIdObjectId = new ObjectId(userId);
-    try {
+export const addReview = asyncHandler(async (req, res) => {
+  const input = await validate(reviewSchema, {
+    ...req.body,
+    userId: req.user._id.toString(),
+  });
 
-        await deleteReviewSchema.validate({ reviewId }, { abortEarly: false });
+  const review = await VehicleRating.create(input);
+  res.status(201).json(review);
+});
 
-        const review = await VehicleRating.findById(reviewId);
+export const editReview = asyncHandler(async (req, res) => {
+  const input = await validate(editReviewSchema, req.body);
+  const review = await findOwnedReview(input.reviewId, req.user._id);
 
-        if (!review) {
-            return res.status(404).json({ message: 'Review not found' });
-        }
+  if (input.rating !== undefined) review.rating = input.rating;
+  if (input.reviewText !== undefined) review.reviewText = input.reviewText;
+  await review.save();
 
-        if (!review.userId.equals(userIdObjectId)) {
-            return res.status(403).json({ message: 'You are not authorized to delete this review' });
-        }
+  res.status(200).json(review);
+});
 
-        await VehicleRating.findByIdAndDelete(reviewId);
+export const deleteReview = asyncHandler(async (req, res) => {
+  const { reviewId } = await validate(deleteReviewSchema, req.body);
+  const review = await findOwnedReview(reviewId, req.user._id);
+  await review.deleteOne();
+  res.status(200).json({ message: "Review deleted successfully" });
+});
 
+export const fetchReview = asyncHandler(async (req, res) => {
+  const { vehicleId } = await validate(fetchReviewSchema, req.body);
+  const reviews = await VehicleRating.find({ vehicleId })
+    .populate("userId", "email profilePic firstName lastName")
+    .sort({ createdAt: -1 });
+  res.status(200).json(reviews);
+});
 
-        res.status(200).json({ message: 'Review deleted successfully' });
-    } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-            // Handle Yup validation errors
-            return res.status(400).json({ errors: error.errors });
-        } else {
-            // Handle other errors (e.g., database errors)
-            console.error('Error deleting review:', error);
-            res.status(500).json({ message: 'Internal server error' });
-        }
-    }
-};
+export const vehicleRating = asyncHandler(async (req, res) => {
+  const { vehicleId } = await validate(fetchReviewSchema, req.body);
+  const [rating] = await VehicleRating.aggregate([
+    { $match: { vehicleId: new mongoose.Types.ObjectId(vehicleId) } },
+    {
+      $group: {
+        _id: "$vehicleId",
+        avgRating: { $avg: "$rating" },
+        totalReviews: { $sum: 1 },
+      },
+    },
+  ]);
 
-export const fetchReview = async (req, res) => {
-    const {
-        vehicleId
-    } = req.body;
-
-    const userId = req.user._id;
-
-    try {
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        await fetchReviewSchema.validate({ vehicleId }, { abortEarly: false });
-
-        const query = { vehicleId: new ObjectId(vehicleId) };
-
-        const reviews = await VehicleRating.find(query)
-            .populate('userId', 'username email profilePic firstName lastName');
-        res.status(200).json(reviews);
-    } catch (error) {
-        if (error instanceof Yup.ValidationError) {
-            return res.status(400).json({ errors: error.errors });
-        } else {
-            res.status(500).json({ message: 'Internal server error' });
-        }
-    }
-};
-
-export const vehicleRating = async (req, res) => {
-    try {
-        await fetchReviewSchema.validate(req.body, { abortEarly: false });
-
-        const vehicleId = new ObjectId(req.body.vehicleId);
-
-        const [ratingData] = await VehicleRating.aggregate([
-            { $match: { vehicleId } },
-            {
-                $group: {
-                    _id: "$vehicleId",
-                    avgRating: { $avg: "$rating" },
-                    totalReviews: { $sum: 1 },
-                },
-            },
-        ]);
-
-        res.status(200).json({
-            avgRating: ratingData?.avgRating?.toFixed(1) || "0.0",
-            totalReviews: ratingData?.totalReviews || 0,
-        });
-    } catch (error) {
-        res.status(error instanceof Yup.ValidationError ? 400 : 500).json({
-            message: error instanceof Yup.ValidationError ? error.errors : "Internal server error",
-        });
-    }
-};
+  res.status(200).json({
+    avgRating: rating?.avgRating?.toFixed(1) || "0.0",
+    totalReviews: rating?.totalReviews || 0,
+  });
+});

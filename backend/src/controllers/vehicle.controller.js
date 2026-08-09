@@ -1,6 +1,5 @@
-import bcrypt from "bcryptjs";
-import { generateToken } from "../lib/utils.js";
 import cloudinary from "../lib/cloudinary.js";
+import crypto from "crypto";
 import VehicleInstance from "../models/vehicleInstance.model.js";
 import VehicleModel from "../models/vehicleModel.model.js";
 import VehicleUpdateRequest from "../models/vehicleRequest.model.js";
@@ -8,9 +7,9 @@ import VehicleImages from "../models/vehicleImages.model.js";
 import { getFileNameFromUrl } from "../lib/utils.js";
 import VehicleLocation from "../models/vehicleLocation.model.js";
 import Booking from "../models/booking.model.js";
-import User from '../models/user.model.js'
-import json2csv from 'json2csv';
-import { populate } from "dotenv";
+
+const canManageVehicle = (req, vehicle) =>
+    req.userRole === "Admin" || vehicle.owner?.equals(req.user._id);
 
 
 // export const addVehicle = async (req, res) => {
@@ -201,7 +200,7 @@ export const updateModelPic = async (req, res) => {
 
     } catch (error) {
         console.error("Error in updateModelPic function:", error.message);
-        return res.status(500).json({ message: "Internal server error", error: error.message });
+    return res.status(500).json({ message: "Internal server error" });
     }
 };
 
@@ -278,6 +277,9 @@ export const updateVehicleData = async (req, res) => {
         if (!vehicle) {
             return res.status(404).json({ error: 'Vehicle not found' });
         }
+        if (!canManageVehicle(req, vehicle)) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
 
         let VehicleImage = null;
         if (vehicle.vehicleImagesId) {
@@ -290,7 +292,6 @@ export const updateVehicleData = async (req, res) => {
                     VehicleImage.VehicleSide2Pic
                 ];
 
-                console.log(imageFields)
                 for (let i = 0; i < imageFields.length; i++) {
                     const imageUrl = imageFields[i];
                     if (imageUrl) {
@@ -323,7 +324,6 @@ export const updateVehicleData = async (req, res) => {
             }
 
         } else {
-            console.debug('No selected images received.');
         }
 
         if (uploadedImagesUrls.length > 0) {
@@ -350,7 +350,6 @@ export const updateVehicleData = async (req, res) => {
                 vehicle.vehicleImagesId = savedVehicleImages._id;
             }
         } else {
-            console.debug('No images were uploaded.');
         }
 
         // Update vehicle location details
@@ -444,6 +443,9 @@ export const deleteVehicleData = async (req, res) => {
         const vehicle = await VehicleInstance.findOne({ _id: vehicleID });
         if (!vehicle) {
             return res.status(404).json({ error: "Vehicle instance not found" });
+        }
+        if (!canManageVehicle(req, vehicle)) {
+            return res.status(403).json({ error: "Forbidden" });
         }
 
         // Handle image deletion if the vehicle has an associated vehicleImagesId
@@ -581,7 +583,6 @@ export const vehicelupdaterequest = async (req, res) => {
         const {
             requestId,
             vehicleId,
-            requestedBy,
             requestMessage,
             status,
             requestType,
@@ -589,7 +590,6 @@ export const vehicelupdaterequest = async (req, res) => {
 
         if (
             !vehicleId ||
-            !requestedBy ||
             !requestMessage ||
             !status ||
             !requestType
@@ -601,6 +601,10 @@ export const vehicelupdaterequest = async (req, res) => {
         if (!vehicle) {
             return res.status(404).json({ error: "Vehicle instance not found" });
         }
+        if (!canManageVehicle(req, vehicle)) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+        const requestedBy = req.user._id;
 
         // If requestId exists, update the existing request
         if (requestId) {
@@ -672,6 +676,11 @@ export const vehicleDeleteRequest = async (req, res) => {
             return res.status(404).json({ message: "Request not found" });
         }
 
+        const requestVehicle = await VehicleInstance.findById(request.vehicleId);
+        if (!requestVehicle || !canManageVehicle(req, requestVehicle)) {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
         const vehicleID = request.vehicleId;
 
         const deletedRequest = await VehicleUpdateRequest.findOneAndDelete({ _id: requestID });
@@ -706,7 +715,8 @@ export const vehicelPendingUpdateRequestData = async (req, res) => {
     try {
 
 
-        const totalUpdateRequestData = await VehicleUpdateRequest.find()
+        const requestFilter = req.userRole === "Admin" ? {} : { requestedBy: req.user._id };
+        const totalUpdateRequestData = await VehicleUpdateRequest.find(requestFilter)
             .populate({
                 path: "vehicleId",
                 select: "vehicleRegNumber owner vehicleImagesId",
@@ -958,10 +968,8 @@ export const acceptRequest = async (req, res) => {
 // };
 export const addVehicle = async (req, res) => {
     try {
-        console.log("Received vehicle data:", req.body);
 
         const {
-            userRole,
             vehicleType,
             vehicleMake,
             vehicleModel,
@@ -974,7 +982,7 @@ export const addVehicle = async (req, res) => {
             manufacturingYear,
             vehiclePics,
             modelPic,
-            owner,
+            owner: requestedOwner,
             vehicleAddress,
             latitude,
             longitude,
@@ -984,6 +992,8 @@ export const addVehicle = async (req, res) => {
             pincode,
             vehicleDocument,
         } = req.body;
+        const userRole = req.userRole;
+        const owner = userRole === "Partner" ? req.user._id : requestedOwner;
 
         if (
             !vehicleType ||
@@ -1013,7 +1023,6 @@ export const addVehicle = async (req, res) => {
 
         const existingVehicle = await VehicleInstance.findOne({ vehicleRegNumber });
         if (existingVehicle) {
-            console.log(`Duplicate vehicle detected: ${vehicleRegNumber}`);
             return res.status(400).json({ message: "Vehicle with this registration number already exists" });
         }
 
@@ -1040,7 +1049,6 @@ export const addVehicle = async (req, res) => {
                         format: "webp",
                     });
                     uploadedPicsUrls.push(uploadedPic.secure_url);
-                    console.log(`Uploaded vehicle image: ${uploadedPic.secure_url}`);
                 } catch (error) {
                     console.error("Error uploading vehicle image:", error);
                 }
@@ -1074,7 +1082,6 @@ export const addVehicle = async (req, res) => {
                     format: "webp",
                 });
                 uploadedModelPicUrl = uploadedModelPic.secure_url;
-                console.log(`Uploaded model picture: ${uploadedModelPicUrl}`);
             } catch (error) {
                 console.error("Error uploading model picture:", error);
             }
@@ -1107,7 +1114,6 @@ export const addVehicle = async (req, res) => {
                     // format: "pdf",
                 });
                 uploadedVehicleDocumentUrl = uploadedDocument.secure_url;
-                console.log(`Uploaded vehicle document: ${uploadedVehicleDocumentUrl}`);
             } catch (error) {
                 console.error("Error uploading vehicle document:", error);
                 return res.status(500).json({ message: "Error uploading vehicle document" });
@@ -1156,13 +1162,11 @@ export const addVehicle = async (req, res) => {
                 status: "pending"
             });
             await verificationRequest.save();
-            console.log("Created verification request:", verificationRequest);
         }
 
         console.log("Fetching populated vehicle instance...");
         const populatedVehicleInstance = await newVehicleInstance.populate("modelID vehicleImagesId vehicleLocationId");
 
-        console.log("Vehicle added successfully:", populatedVehicleInstance);
         res.status(201).json({
             success: true,
             vehicle: populatedVehicleInstance,
@@ -1187,7 +1191,6 @@ export const addVehicle = async (req, res) => {
 export const bookingVehicle = async (req, res) => {
     try {
         const {
-            userID,
             vehicleID,
             firstName,
             lastName,
@@ -1198,6 +1201,7 @@ export const bookingVehicle = async (req, res) => {
             accessories,
             totalPrice,
         } = req.body;
+        const userID = req.user._id;
 
         // Validate required fields
         if (!userID || !vehicleID || !startDateTime || !endDateTime || !totalPrice) {
@@ -1205,19 +1209,25 @@ export const bookingVehicle = async (req, res) => {
             return res.status(400).json({ success: false, message: "All required fields must be filled!" });
         }
 
-        // Check if the vehicle exists
-        const vehicle = await VehicleInstance.findById(vehicleID);
-
-        if (!vehicle) {
-            return res.status(404).json({ success: false, message: "The selected vehicle does not exist!" });
+        const start = new Date(startDateTime);
+        const end = new Date(endDateTime);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+            return res.status(400).json({ success: false, message: "Booking dates are invalid" });
         }
 
-        if (vehicle.availabilityStatus === "Booked") {
+        // Atomically reserve the vehicle so concurrent requests cannot double-book it.
+        const vehicle = await VehicleInstance.findOneAndUpdate(
+            { _id: vehicleID, availabilityStatus: "Available", verify: true },
+            { availabilityStatus: "Booked" },
+            { new: true },
+        );
+
+        if (!vehicle) {
             return res.status(400).json({ success: false, message: "This vehicle is already booked. Please choose another one." });
         }
 
         // Generate a 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 1000000).toString();
 
         // Convert accessories object into an array of selected options
         const selectedAccessories = accessories
@@ -1230,8 +1240,8 @@ export const bookingVehicle = async (req, res) => {
         const newBooking = new Booking({
             userID,
             vehicleID,
-            startDateTime: new Date(startDateTime),
-            endDateTime: new Date(endDateTime),
+            startDateTime: start,
+            endDateTime: end,
             accessories: selectedAccessories,
             totalPrice,
             status: "Booked",
@@ -1239,11 +1249,13 @@ export const bookingVehicle = async (req, res) => {
         });
 
         // Save booking to the database
-        const savedBooking = await newBooking.save();
-
-        // Update vehicle status
-        vehicle.availabilityStatus = "Booked";
-        await vehicle.save();
+        let savedBooking;
+        try {
+            savedBooking = await newBooking.save();
+        } catch (error) {
+            await VehicleInstance.findByIdAndUpdate(vehicleID, { availabilityStatus: "Available" });
+            throw error;
+        }
 
         return res.status(201).json({
             success: true,
@@ -1256,7 +1268,7 @@ export const bookingVehicle = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "An error occurred while processing your booking. Please try again.",
-            error: error.message,
+            error: "Internal Server Error",
         });
     }
 };
@@ -1277,6 +1289,9 @@ export const cancelBooking = async (req, res) => {
         const booking = await Booking.findById(bookingID);
         if (!booking) {
             return res.status(404).json({ success: false, message: "Booking not found!" });
+        }
+        if (!booking.userID.equals(req.user._id)) {
+            return res.status(403).json({ success: false, message: "Forbidden" });
         }
 
         // Fetch the associated vehicle using vehicleID from booking
@@ -1303,7 +1318,7 @@ export const cancelBooking = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: "An error occurred while canceling the booking. Please try again.",
-            error: error.message
+        error: "Internal Server Error"
         });
     }
 };
@@ -1347,11 +1362,10 @@ export const cancelBooking = async (req, res) => {
 
 export const getVehicleHistory = async (req, res) => {
     try {
-        const { userID, role } = req.body; // Extract userID and role
+        const userID = req.user._id;
+        const role = req.userRole;
 
-        if (!userID || !role) {
-            return res.status(400).json({ success: false, message: "UserID and role are required" });
-        }
+        if (!role) return res.status(403).json({ success: false, message: "Forbidden" });
 
         let bookings;
 

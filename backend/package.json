@@ -25,8 +25,6 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.16",
     "razorpay": "^2.9.6",
-    "react-pdf": "^9.2.1",
-    "recharts": "^2.15.1",
     "yup": "^1.6.1"
   },
   "devDependencies": {

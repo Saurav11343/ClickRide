@@ -35,7 +35,6 @@ export default function PartnerVehicleUpdateRequest() {
     const [selectedRequestID, setSelectedRequestId] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [requestData, setRequestData] = useState("");
-    console.log(requestData)
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
@@ -169,7 +168,6 @@ export default function PartnerVehicleUpdateRequest() {
                     (request.requestType === "Update" && request.status === "pending" && request.status !== "review" && request.status !== "approved"))) ||
             (UserRole === "Admin" && request.status !== "approved")
         );
-        console.log(request.requestType)
 
         return (
             <div

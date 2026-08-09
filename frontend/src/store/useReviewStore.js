@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios.js";
 import toast from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { getApiErrorMessage } from "../lib/apiError.js";
 
 export const useReviewStore = create((set) => ({
     isAddingReview: false,
@@ -17,8 +17,7 @@ export const useReviewStore = create((set) => ({
             toast.success("Review added successfully!");
             return res.data;
         } catch (error) {
-            console.error("Error adding review:", error);
-            toast.error(error.response?.data?.message || "Failed to add review");
+            toast.error(getApiErrorMessage(error, "Failed to add review"));
             throw error;
         } finally {
             set({ isAddingReview: false });
@@ -33,8 +32,7 @@ export const useReviewStore = create((set) => ({
             toast.success("Review updated successfully!");
             return res.data;
         } catch (error) {
-            console.error("Error editing review:", error);
-            toast.error(error.response?.data?.message || "Failed to update review");
+            toast.error(getApiErrorMessage(error, "Failed to update review"));
             throw error;
         } finally {
             set({ isEditingReview: false });
@@ -49,8 +47,7 @@ export const useReviewStore = create((set) => ({
             toast.success("Review deleted successfully!");
             return res.data;
         } catch (error) {
-            console.error("Error deleting review:", error);
-            toast.error(error.response?.data?.message || "Failed to delete review");
+            toast.error(getApiErrorMessage(error, "Failed to delete review"));
             throw error;
         } finally {
             set({ isDeletingReview: false });
@@ -64,8 +61,7 @@ export const useReviewStore = create((set) => ({
             const res = await axiosInstance.post('/review/fetchReview', fetchData);
             return res.data;
         } catch (error) {
-            console.error("Error fetching reviews:", error);
-            toast.error(error.response?.data?.message || "Failed to fetch reviews");
+            toast.error(getApiErrorMessage(error, "Failed to fetch reviews"));
             throw error;
         } finally {
             set({ isFetching: false });
@@ -78,8 +74,7 @@ export const useReviewStore = create((set) => ({
             const { data } = await axiosInstance.post('/review/vehicleRating', fetchData);
             return data;
         } catch (error) {
-            console.error("Error fetching reviews:", error);
-            toast.error(error.response?.data?.message || "Failed to fetch reviews");
+            toast.error(getApiErrorMessage(error, "Failed to fetch ratings"));
             throw error;
         } finally {
             set({ isRating: false });

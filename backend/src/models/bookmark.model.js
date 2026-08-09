@@ -20,6 +20,8 @@ const bookmarkSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+bookmarkSchema.index({ userId: 1, vehicleId: 1 }, { unique: true });
+
 const Bookmark = mongoose.model("Bookmark", bookmarkSchema);
 export default Bookmark;
 

@@ -49,7 +49,6 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     adminAnalysis();
   }, []);
-  console.log(analyticsData)
   const formatCurrency = (value) => `₹${value?.toLocaleString('en-IN')}`;
 
   if (isLoading) {

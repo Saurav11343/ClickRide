@@ -1,13 +1,18 @@
-import express from "express"
+import { Router } from "express";
+import {
+  deletePartnerRequest,
+  partnerRequest,
+  partnerSignup,
+  validatePartnerRequest,
+} from "../controllers/partner.controller.js";
+import { protectRoute, requireRole } from "../middleware/auth.middleware.js";
 
-import { partnerSignup, validatePartnerRequest } from "../controllers/partner.controller.js";
-import { partnerRequest } from "../controllers/partner.controller.js";
-import { deletePartnerRequest } from "../controllers/partner.controller.js";
+const router = Router();
+const adminOnly = [protectRoute, requireRole("Admin")];
 
-const router = express.Router()
+router.post("/partnerSignup", partnerSignup);
+router.get("/partnerRequest", ...adminOnly, partnerRequest);
+router.post("/deletePartnerRequest", ...adminOnly, deletePartnerRequest);
+router.post("/validatePartnerRequest", ...adminOnly, validatePartnerRequest);
 
-router.post("/partnerSignup", partnerSignup)
-router.get("/partnerRequest", partnerRequest)
-router.post("/deletePartnerRequest", deletePartnerRequest)
-router.post("/validatePartnerRequest", validatePartnerRequest)
 export default router;
